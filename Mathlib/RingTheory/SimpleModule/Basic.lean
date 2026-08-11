@@ -331,6 +331,27 @@ theorem _root_.LinearMap.isSemisimpleModule_iff_of_bijective
   simp_rw [isSemisimpleModule_iff,
     (Submodule.orderIsoMapComapOfBijective l hl).complementedLattice_iff]
 
+/-- A module admitting an injective semilinear map into a semisimple module is semisimple.
+
+The assumption `RingHomSurjective σ` cannot be dropped: the inclusion `ℤ → ℚ` is an injective
+`Int.castRingHom ℚ`-semilinear map, `ℚ` is a semisimple `ℚ`-module, but `ℤ` is not a semisimple
+`ℤ`-module. -/
+theorem _root_.LinearMap.isSemisimpleModule_of_injective [RingHomSurjective σ]
+    (hl : Function.Injective l) [IsSemisimpleModule S N'] : IsSemisimpleModule R M' :=
+  (l.rangeRestrict.isSemisimpleModule_iff_of_bijective
+    ⟨fun _ _ h ↦ hl congr(($h : range l).1), l.surjective_rangeRestrict⟩).mpr inferInstance
+
+/-- The image of a semisimple module under a surjective semilinear map is semisimple.
+
+The assumption `RingHomSurjective σ` cannot be dropped: the identity of `ℚ[X]/(X ^ 2)` is a
+surjective semilinear map over the inclusion `ℚ → ℚ[X]/(X ^ 2)`, its source is a semisimple
+`ℚ`-module, but its target is not a semisimple `ℚ[X]/(X ^ 2)`-module. -/
+theorem _root_.LinearMap.isSemisimpleModule_of_surjective [RingHomSurjective σ]
+    (hl : Function.Surjective l) [IsSemisimpleModule R M'] : IsSemisimpleModule S N' :=
+  ((ker l).liftQ l le_rfl).isSemisimpleModule_iff_of_bijective
+    ⟨ker_eq_bot.mp (Submodule.ker_liftQ_eq_bot _ _ _ le_rfl),
+      by rwa [← range_eq_top, Submodule.range_liftQ, range_eq_top]⟩ |>.mp inferInstance
+
 end
 
 end IsSemisimpleModule

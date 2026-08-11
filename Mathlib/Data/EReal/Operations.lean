@@ -322,6 +322,27 @@ theorem recENNReal_coe_ennreal {motive : EReal → Sort*} (coe : ∀ x : ℝ≥0
   obtain rfl : y.toENNReal = x := by simp [← hy]
   simp [recENNReal, H₁]
 
+@[simp]
+theorem recENNReal_neg_coe_ennreal {motive : EReal → Sort*} (coe : ∀ x : ℝ≥0∞, motive x)
+    (neg_coe : ∀ x : ℝ≥0∞, 0 < x → motive (-x)) {x : ℝ≥0∞} (hx : 0 < x) :
+    recENNReal coe neg_coe (-x) = neg_coe x hx := by
+  suffices ∀ y : EReal, -(x : EReal) = y →
+      (recENNReal coe neg_coe y : motive y) ≍ neg_coe x hx from heq_iff_eq.mp (this _ rfl)
+  intro y hy
+  have H₁ : ¬0 ≤ y := by
+    rw [← hy]
+    simp only [EReal.neg_nonneg, not_le]
+    exact_mod_cast hx
+  obtain rfl : (-y).toENNReal = x := by rw [← hy, neg_neg, toENNReal_coe]
+  -- Transporting `neg_coe` along `hy` does not change it, since `hy` only rewrites the index.
+  have key : ∀ (z : EReal) (h : -((-y).toENNReal : EReal) = z) (hz : 0 < (-y).toENNReal),
+      (h ▸ neg_coe ((-y).toENNReal) : 0 < (-y).toENNReal → motive z) hz ≍
+        neg_coe ((-y).toENNReal) hz := by
+    rintro z rfl hz
+    rfl
+  rw [recENNReal, dite_eq_right_of_eq_false (by simpa using H₁)]
+  exact key y hy hx
+
 /-!
 ### Subtraction
 

@@ -336,17 +336,29 @@ theorem comap_injective {F} [FunLike F R' R] [MulHomClass F R' R] [AddHomClass F
     Function.Injective (comap · f) :=
   .of_comp (f := toCon) <| (Con.comap_injective f hf <| map_mul f).comp toCon_injective
 
+/-- Pulling back `ringConGen r` along an isomorphism `f` gives `ringConGen (r on f)`.
+
+Note that the `FunLike` instance used by `MulHomClass` and `AddHomClass` here is the one coming
+from `EquivLike`; adding a separate `FunLike` binder would create a diamond. -/
+theorem comap_ringConGen_equiv {F} [EquivLike F R' R] [MulHomClass F R' R] [AddHomClass F R' R]
+    (r : R → R → Prop) (f : F) :
+    (ringConGen r).comap f = ringConGen (r on f) := by
+  -- Bundle `f` as a `RingEquiv` so that its inverse is available as a ring hom.
+  let e : R' ≃+* R :=
+    { EquivLike.toEquiv f with map_mul' := map_mul f, map_add' := map_add f }
+  have he : ⇑e = ⇑f := rfl
+  refine le_antisymm (fun {x y} hxy ↦ ?_) (le_comap_ringConGen _ _)
+  have key : ringConGen r ≤ (ringConGen (r on ⇑f)).comap e.symm :=
+    ringConGen_le.2 fun x y h ↦ RingConGen.Rel.of _ _ <| by
+      simpa [Function.onFun, ← he] using h
+  have h := key (x := f x) (y := f y) hxy
+  rw [comap_rel] at h
+  simpa [← he] using h
+
 theorem comap_ringConGen_ringEquiv {R R'} [NonAssocSemiring R] [NonAssocSemiring R']
     (r : R' → R' → Prop) (f : R ≃+* R') :
-    (ringConGen r).comap f = ringConGen (r on f) := by
-  refine le_antisymm ?_ (le_comap_ringConGen _ _)
-  trans (ringConGen (r on ⇑f) |>.comap f.symm.toNonUnitalRingHom).comap f.toNonUnitalRingHom
-  · apply comap_mono
-    grw [← le_comap_ringConGen]
-    gcongr
-    simp [Function.onFun, RingEquiv.coe_toNonUnitalRingHom']
-  · rw [← comap_nonUnitalRingHomComp]
-    simp
+    (ringConGen r).comap f = ringConGen (r on f) :=
+  comap_ringConGen_equiv r f
 
 end Lattice
 
