@@ -185,22 +185,97 @@ end Integral
 
 variable {X : Ω → ℝ}
 
+/-- The first moment of the binomial weights: `∑ k, C(N, k) a ^ k (1 - a) ^ (N - k) * k = a * N`. -/
+private lemma sum_range_choose_mul_pow_mul_cast (N : ℕ) (a : ℝ) :
+    ∑ k ∈ Finset.range (N + 1), ((N.choose k : ℝ) * a ^ k * (1 - a) ^ (N - k)) * (k : ℝ)
+      = a * N := by
+  rw [Finset.sum_range_succ']
+  cases N with norm_num | succ N
+  calc
+    _ = a * ∑ x ∈ Finset.range (N + 1), (N + 1).choose (x + 1) * (x + 1) *
+        a ^ x * (1 - a) ^ (N - x) := by grind [Finset.mul_sum]
+    _ = a * ∑ x ∈ Finset.range (N + 1), N.choose x * (N + 1) * a ^ x * (1 - a) ^ (N - x) := by
+      congrm a * ∑ x ∈ Finset.range (N + 1), ?_ * a ^ x * (1 - a) ^ (N - x)
+      norm_cast
+      rw [← Nat.add_one_mul_choose_eq N x, mul_comm]
+    _ = a * (N + 1) * ∑ x ∈ Finset.range (N + 1), N.choose x * a ^ x * (1 - a) ^ (N - x) := by
+      rw [mul_assoc, Finset.mul_sum (a := (N : ℝ) + 1)]
+      group
+    _ = a * (N + 1) := by grind [add_pow a (1 - a) N, one_pow]
+
+/-- The second moment of the binomial weights:
+`∑ k, C(N, k) a ^ k (1 - a) ^ (N - k) * k ^ 2 = a (1 - a) N + (a N) ^ 2`. -/
+private lemma sum_range_choose_mul_pow_mul_cast_sq (N : ℕ) (a : ℝ) :
+    ∑ k ∈ Finset.range (N + 1), ((N.choose k : ℝ) * a ^ k * (1 - a) ^ (N - k)) * (k : ℝ) ^ 2
+      = a * (1 - a) * N + (a * N) ^ 2 := by
+  rw [Finset.sum_range_succ']
+  cases N with norm_num | succ N
+  have hsum : ∑ x ∈ Finset.range (N + 1), ((N.choose x : ℝ) * a ^ x * (1 - a) ^ (N - x)) = 1 := by
+    grind [add_pow a (1 - a) N, one_pow]
+  have hfst := sum_range_choose_mul_pow_mul_cast N a
+  calc
+    _ = a * ∑ x ∈ Finset.range (N + 1), ((N + 1).choose (x + 1) * (x + 1)) * ((x : ℝ) + 1) *
+        a ^ x * (1 - a) ^ (N - x) := by
+      rw [Finset.mul_sum]
+      refine Finset.sum_congr rfl fun x _ ↦ ?_
+      simp only [Nat.succ_sub_succ]
+      ring
+    _ = a * ∑ x ∈ Finset.range (N + 1), (N.choose x * (N + 1)) * ((x : ℝ) + 1) *
+        a ^ x * (1 - a) ^ (N - x) := by
+      congrm a * ∑ x ∈ Finset.range (N + 1), ?_ * ((x : ℝ) + 1) * a ^ x * (1 - a) ^ (N - x)
+      norm_cast
+      rw [← Nat.add_one_mul_choose_eq N x, mul_comm]
+    _ = a * (N + 1) * ∑ x ∈ Finset.range (N + 1),
+          (((N.choose x : ℝ) * a ^ x * (1 - a) ^ (N - x)) * (x : ℝ)
+            + ((N.choose x : ℝ) * a ^ x * (1 - a) ^ (N - x))) := by
+      rw [mul_assoc, Finset.mul_sum (a := (N : ℝ) + 1)]
+      exact congrArg _ (Finset.sum_congr rfl fun x _ ↦ by ring)
+    _ = a * (N + 1) * (a * N + 1) := by rw [Finset.sum_add_distrib, hfst, hsum]
+    _ = _ := by ring
+
 /-- **Expectation of a binomial random variable**.
 
 The expectation of a binomial random variable with parameters `n` and `p` is `pn`. -/
 theorem integral_of_hasLaw_binomial (hX : HasLaw X Bin(ℝ, n, p) P) : P[X] = p.val * n := by
-  rw [hX.integral_eq, integral_map_cast_binomial, ← n.range_succ_eq_Iic, Finset.sum_range_succ']
-  cases n with norm_num | succ n
-  calc
-    _ = p * ∑ x ∈ Finset.range (n + 1), (n + 1).choose (x + 1) * (x + 1) *
-        p.val ^ x * (1 - p) ^ (n - x) := by grind [Finset.mul_sum]
-    _ = p * ∑ x ∈ Finset.range (n + 1), n.choose x * (n + 1) * p.val ^ x * (1 - p) ^ (n - x) := by
-      congrm p * ∑ x ∈ Finset.range (n + 1), ?_ * p.val ^ x * (1 - p) ^ (n - x)
-      norm_cast
-      rw [← Nat.add_one_mul_choose_eq n x, mul_comm]
-    _ = p * (n + 1) * ∑ x ∈ Finset.range (n + 1), n.choose x * p.val ^ x * (1 - p) ^ (n - x) := by
-      rw [mul_assoc, Finset.mul_sum (a := (n : ℝ) + 1)]
-      group
-    _ = p * (n + 1) := by grind [add_pow p.val (1 - p) n, one_pow]
+  rw [hX.integral_eq, integral_map_cast_binomial, ← n.range_succ_eq_Iic]
+  simpa using sum_range_choose_mul_pow_mul_cast n p
+
+/-- **Variance of a binomial random variable**.
+
+The variance of a binomial random variable with parameters `n` and `p` is `p(1 - p)n`. -/
+theorem variance_of_hasLaw_binomial (hX : HasLaw X Bin(ℝ, n, p) P) :
+    Var[X; P] = p * (1 - p) * n := by
+  have hmem : MemLp id 2 Bin(ℝ, n, p) :=
+    (memLp_two_iff_integrable_sq aestronglyMeasurable_id).2 (integrable_map_cast_binomial _)
+  rw [hX.variance_eq, variance_eq_sub hmem, integral_of_hasLaw_binomial HasLaw.id,
+    show ((id : ℝ → ℝ) ^ 2) = (fun x : ℝ ↦ x ^ 2) from rfl, integral_map_cast_binomial,
+    ← n.range_succ_eq_Iic]
+  simp only [smul_eq_mul]
+  rw [sum_range_choose_mul_pow_mul_cast_sq n p]
+  ring
+
+/-- **Conditional variance of a Bernoulli random variable**.
+
+The conditional variance of a `{0, 1}`-valued random variable is the product of the conditional
+probabilities that it is equal to `1` and that it is equal to `0`.
+
+This fails for `Bin(ℝ, n, p)` as soon as `n ≥ 2`: conditioning on the trivial σ-algebra it would
+say `n * p * (1 - p) = n * p * (1 - n * p)`, which is false for `n = 2`, `p = 1 / 2`. -/
+theorem condVar_of_hasLaw_binomial_one {m₀ : MeasurableSpace Ω} (hm : m ≤ m₀)
+    {P : Measure[m₀] Ω} (hX : HasLaw X Bin(ℝ, 1, p) P) :
+    Var[X; P | m] =ᵐ[P] P[X | m] * P[1 - X | m] := by
+  have : IsProbabilityMeasure P := hX.isProbabilityMeasure
+  have h01 : ∀ᵐ ω ∂P, X ω = 0 ∨ X ω = 1 := by
+    refine (hX.ae_iff (p := fun x : ℝ ↦ x = 0 ∨ x = 1) (by fun_prop)).2 ?_
+    rw [ae_map_iff (by fun_prop) (by measurability)]
+    filter_upwards [ae_le_of_hasLaw_binomial (P := Bin(1, p)) HasLaw.id] with k hk
+    simp only [id_eq] at hk
+    rcases Nat.le_one_iff_eq_zero_or_eq_one.1 hk with rfl | rfl <;> norm_num
+  refine condVar_eq_condExp_mul_condExp_one_sub hm ?_ ?_
+  · exact memLp_of_bounded (a := 0) (b := 1)
+      (by filter_upwards [h01] with ω hω; rcases hω with h | h <;> simp [h])
+      hX.aemeasurable.aestronglyMeasurable 2
+  · filter_upwards [h01] with ω hω
+    rcases hω with h | h <;> simp [h]
 
 end ProbabilityTheory

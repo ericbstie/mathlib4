@@ -131,6 +131,24 @@ lemma condVar_ae_le_condExp_sq (hm : m ≤ m₀) [IsFiniteMeasure μ] (hX : MemL
   dsimp at hω
   nlinarith
 
+/-- For an idempotent random variable, ie one that is almost everywhere `0` or `1`, the conditional
+variance is the product of the conditional expectations of `X` and `1 - X`.
+
+Note that this genuinely needs `X` to be `{0, 1}`-valued: for a general `X` the right-hand side is
+not even nonnegative. -/
+lemma condVar_eq_condExp_mul_condExp_one_sub (hm : m ≤ m₀) [IsFiniteMeasure μ]
+    (hX : MemLp X 2 μ) (hX2 : X ^ 2 =ᵐ[μ] X) :
+    Var[X; μ | m] =ᵐ[μ] μ[X | m] * μ[1 - X | m] := by
+  have h2 : μ[1 - X | m] =ᵐ[μ] 1 - μ[X | m] := by
+    have h := condExp_sub (μ := μ) (integrable_const (1 : ℝ)) (hX.integrable one_le_two) m
+    rw [condExp_const hm] at h
+    exact h
+  filter_upwards [condVar_ae_eq_condExp_sq_sub_sq_condExp hm hX, condExp_congr_ae hX2, h2]
+    with ω hω h1ω h2ω
+  simp only [Pi.sub_apply, Pi.mul_apply, Pi.pow_apply, Pi.one_apply] at hω h2ω ⊢
+  rw [hω, h1ω, h2ω]
+  ring
+
 /-- **Law of total variance** -/
 lemma integral_condVar_add_variance_condExp (hm : m ≤ m₀) [IsProbabilityMeasure μ]
     (hX : MemLp X 2 μ) : μ[Var[X; μ | m]] + Var[μ[X | m]; μ] = Var[X; μ] := by
