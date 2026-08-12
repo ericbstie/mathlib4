@@ -248,3 +248,65 @@ theorem isSemisimpleRing_iff_pi_matrix_divisionRing : IsSemisimpleRing R ↔
   mp _ := have ⟨n, D, d, _, _, e⟩ := IsSemisimpleRing.exists_ringEquiv_pi_matrix_divisionRing R
     ⟨n, D, d, _, e⟩
   mpr := fun ⟨_, _, _, _, ⟨e⟩⟩ ↦ e.symm.isSemisimpleRing
+
+/-!
+### Semiprimary rings and the opposite ring
+
+Being semiprimary is left-right symmetric. This rests on `Ring.mem_jacobson_op_iff`, the
+left-right symmetry of the Jacobson radical.
+-/
+
+namespace Ring
+
+open MulOpposite
+
+/-- Powers of the Jacobson radical transfer to the opposite ring. Note the order of a product is
+reversed by `MulOpposite.unop`, which is why the induction peels a factor off opposite ends on the
+two sides. -/
+theorem unop_mem_jacobson_pow : ∀ (n : ℕ) (x : Rᵐᵒᵖ),
+    x ∈ jacobson Rᵐᵒᵖ ^ n → x.unop ∈ jacobson R ^ n := by
+  intro n
+  induction n with
+  | zero => intro x _; rw [Submodule.pow_zero, Ideal.one_eq_top]; trivial
+  | succ n ih =>
+    intro x hx
+    rcases eq_or_ne n 0 with rfl | hn
+    · rw [zero_add, Submodule.pow_one] at hx ⊢
+      exact mem_jacobson_op_iff.1 (by rwa [op_unop])
+    · rw [Submodule.pow_succ] at hx
+      rw [(jacobson R).pow_succ' hn]
+      refine Submodule.mul_induction_on hx ?_ ?_
+      · intro a ha b hb
+        exact Submodule.mul_mem_mul (mem_jacobson_op_iff.1 (by rwa [op_unop])) (ih a ha)
+      · intro y z hy hz
+        simpa using add_mem hy hz
+
+/-- Quotienting `Rᵐᵒᵖ` by its Jacobson radical gives the opposite of the quotient of `R` by its
+Jacobson radical. -/
+noncomputable def jacobsonOpQuotEquiv :
+    Rᵐᵒᵖ ⧸ jacobson Rᵐᵒᵖ ≃+* (R ⧸ jacobson R)ᵐᵒᵖ := by
+  have hsurj : Function.Surjective (RingHom.op (Ideal.Quotient.mk (jacobson R))) := fun y ↦ by
+    obtain ⟨x, hx⟩ := Ideal.Quotient.mk_surjective y.unop
+    exact ⟨op x, by simpa using congrArg op hx⟩
+  have hker : RingHom.ker (RingHom.op (Ideal.Quotient.mk (jacobson R))) = jacobson Rᵐᵒᵖ := by
+    ext x
+    rw [RingHom.mem_ker]
+    change op (Ideal.Quotient.mk (jacobson R) x.unop) = 0 ↔ _
+    rw [MulOpposite.op_eq_zero_iff, Ideal.Quotient.eq_zero_iff_mem,
+      ← mem_jacobson_op_iff (x := x.unop), op_unop]
+  exact (Ideal.quotEquivOfEq hker.symm).trans (RingHom.quotientKerEquivOfSurjective hsurj)
+
+end Ring
+
+/-- The opposite of a semiprimary ring is semiprimary. -/
+theorem IsSemiprimaryRing.mulOpposite [IsSemiprimaryRing R] : IsSemiprimaryRing Rᵐᵒᵖ where
+  isSemisimpleRing := Ring.jacobsonOpQuotEquiv.symm.isSemisimpleRing
+  isNilpotent := by
+    obtain ⟨n, hn⟩ := IsSemiprimaryRing.isNilpotent (R := R)
+    refine ⟨n, ?_⟩
+    have hbot : Ring.jacobson R ^ n = ⊥ := by rwa [← Submodule.zero_eq_bot]
+    rw [Submodule.zero_eq_bot, eq_bot_iff]
+    intro x hx
+    have h := Ring.unop_mem_jacobson_pow n x hx
+    rw [hbot] at h
+    simpa using h

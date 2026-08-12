@@ -9,13 +9,12 @@ public import Mathlib.RingTheory.SimpleModule.WedderburnArtin
 
 variable {R : Type*} [Ring R]
 
--- The element-level left-right symmetry of the Jacobson radical is now available as
--- `Ring.mem_jacobson_op_iff`. What is still missing is the ideal-level transport: an
--- identification of `Ring.jacobson Rᵐᵒᵖ` with the image of `Ring.jacobson R` under `op`,
--- carrying nilpotency and the ring equivalence `Rᵐᵒᵖ ⧸ jacobson Rᵐᵒᵖ ≃+* (R ⧸ jacobson R)ᵐᵒᵖ`
--- (then `isSemisimpleRing_mulOpposite_iff` finishes the job).
-proof_wanted IsSemiprimaryRing.mulOpposite [IsSemiprimaryRing R] : IsSemiprimaryRing Rᵐᵒᵖ
-
+-- `IsSemiprimaryRing.mulOpposite` is now proved, using the left-right symmetry of the Jacobson
+-- radical (`Ring.mem_jacobson_op_iff`). The `Iff` version below still needs a transfer of
+-- `IsSemiprimaryRing` along a `RingEquiv` — apply `IsSemiprimaryRing.mulOpposite` to `Rᵐᵒᵖ` and
+-- move back along `RingEquiv.opOp`, exactly as `isSemisimpleRing_mulOpposite_iff` does with
+-- `RingEquiv.isSemisimpleRing`. That transfer needs `Ring.map_jacobson_of_ker_le` plus a
+-- quotient equivalence, in the style of `Ring.jacobsonOpQuotEquiv`.
 proof_wanted isSemiprimaryRing_mulOpposite_iff : IsSemiprimaryRing Rᵐᵒᵖ ↔ IsSemiprimaryRing R
 
 -- A left Artinian ring is right Noetherian iff it is right Artinian. To be left as an `example`.
