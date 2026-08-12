@@ -41,8 +41,30 @@ a model's say-so.*
 | Frontier | Next target | Feasibility | Scout |
 |---|---|---|---|
 | A. Semiprimary / Artinian rings | `isSemiprimaryRing_mulOpposite_iff` (needs `RingEquiv` transfer of `IsSemiprimaryRing`) | high — prior commit left an explicit route | dispatched |
-| B. Binomial random graphs | law of the complement / edge indicators / expected edge count | high — freshly opened area, thin API above it | dispatched |
-| C. Hopkins–Levitzki | `IsArtinianRing.isNoetherianRing_iff_isArtinianRing_mulOpposite` | medium — depends on A | — |
+| B. Binomial random graphs | expected edge count + variance of edge count | **high — scouted, route confirmed** | ✅ reported |
+| C. Pointed cone face lattice | `Face F ≃o Set.Iic F` — the face lattice of a face is a down-set | high — ingredients verified present | orchestrator |
+| D. Hopkins–Levitzki | `IsArtinianRing.isNoetherianRing_iff_isArtinianRing_mulOpposite` | medium — depends on A | — |
+
+### Frontier B route (scouted, all identifiers verified to exist)
+
+The chain **compounds two results already on this branch**: `binomialRandom_map_ncard_edgeSet`
+(`67dae0a`, the edge count is binomial) and `variance_of_hasLaw_binomial` / `integral_of_hasLaw_binomial`
+(`a53d4ad`, the moments of a binomial). Neither alone says anything about graphs; together they give
+the two most-quoted facts about `G(V, p)`.
+
+| Step | Statement | Effort |
+|---|---|---|
+| A1 | `binomialRandom_hasLaw_ncard_edgeSet` — recast the edge-count law in `HasLaw` form | ~8 lines, enabler |
+| A2 | `G(V,p)[fun G ↦ (G.edgeSet.ncard : ℝ)] = p * C(‖V‖, 2)` — **expected edge count** | ~2 lines after A1 |
+| A3 | `Var[edge count] = p(1-p) · C(‖V‖, 2)` | ~2 lines after A1 |
+
+Scout also found dead code: the private `ncard_diagSet_compl_eq` duplicates `Sym2.ncard_diagSet_compl`
+(`Mathlib/Data/Sym/NatCard.lean:73`), invisible only because the file imports `Data.Sym.Card` rather
+than `Data.Sym.NatCard`.
+
+Deferred as genuinely too expensive for now (recorded so no cycle re-derives it): independence of
+distinct edge indicators (needs `infinitePi`→`Measure.pi` bridging), the law of an induced subgraph
+(needs a `setBernoulli` marginal lemma that does not exist), and monotone coupling in `p`.
 
 ### Frontier assessment: `Wanted/` is nearly exhausted
 
