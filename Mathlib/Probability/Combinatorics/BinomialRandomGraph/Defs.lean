@@ -7,6 +7,7 @@ module
 
 public import Mathlib.Data.Sym.Card
 public import Mathlib.MeasureTheory.Constructions.SimpleGraph
+public import Mathlib.Probability.Distributions.Binomial
 public import Mathlib.Probability.Distributions.SetBernoulli
 
 /-!
@@ -96,5 +97,46 @@ variable (p) in
   congr!
   rw [Nat.card_eq_fintype_card, ← Sym2.card_diagSet_compl, Fintype.card_eq_nat_card,
     ← Nat.card_coe_set_eq]
+
+/-- The edge set of a binomial random graph on `V` is a `setBernoulli` random subset of the
+non-diagonal elements of `Sym2 V`, so its size has the same law as the size of that subset. -/
+private lemma map_ncard_binomialRandom_eq [Finite V] :
+    G(V, p).map (fun G ↦ G.edgeSet.ncard)
+      = setBer((Sym2.diagSetᶜ : Set (Sym2 V)), p).map Set.ncard := by
+  rw [binomialRandom_eq_map, Measure.map_map (by fun_prop) (by fun_prop)]
+  refine Measure.map_congr ?_
+  filter_upwards [setBernoulli_ae_subset] with s hs
+  simp only [Function.comp_apply, edgeSet_fromEdgeSet]
+  have hsub : s \ Sym2.diagSet = s := by
+    ext x
+    simp only [Set.mem_sdiff, and_iff_left_iff_imp]
+    exact fun hx ↦ hs hx
+  rw [hsub]
+
+private lemma ncard_diagSet_compl_eq [Finite V] :
+    (Sym2.diagSetᶜ : Set (Sym2 V)).ncard = (Nat.card V).choose 2 := by
+  classical
+  cases nonempty_fintype V
+  rw [Nat.card_eq_fintype_card, ← Sym2.card_diagSet_compl, Fintype.card_eq_nat_card,
+    ← Nat.card_coe_set_eq]
+
+/-- **The number of edges of a binomial random graph is binomially distributed**, with parameters
+`(Nat.card V).choose 2` (the number of potential edges) and `p`. -/
+theorem binomialRandom_map_ncard_edgeSet [Finite V] :
+    G(V, p).map (fun G ↦ G.edgeSet.ncard) = Bin((Nat.card V).choose 2, p) := by
+  refine Measure.ext_of_singleton fun k ↦ ?_
+  rw [map_ncard_binomialRandom_eq, map_ncard_setBernoulli_singleton (Set.toFinite _),
+    ncard_diagSet_compl_eq, binomial_singleton]
+
+theorem binomialRandom_map_ncard_edgeSet_singleton [Finite V] (n : ℕ) :
+    G(V, p).map (fun G ↦ G.edgeSet.ncard) {n} = ((Nat.card V).choose 2).choose n *
+      toNNReal p ^ n * toNNReal (σ p) ^ ((Nat.card V).choose 2 - n) := by
+  rw [map_ncard_binomialRandom_eq, map_ncard_setBernoulli_singleton (Set.toFinite _),
+    ncard_diagSet_compl_eq,
+    show ((1 : ℝ) - ↑p) = ((σ p : I) : ℝ) from (coe_symm_eq p).symm,
+    ← coe_toNNReal p, ← coe_toNNReal (σ p),
+    ENNReal.ofReal_mul (by positivity), ENNReal.ofReal_mul (by positivity),
+    ENNReal.ofReal_pow (by positivity), ENNReal.ofReal_pow (by positivity),
+    ENNReal.ofReal_natCast, ENNReal.ofReal_coe_nnreal, ENNReal.ofReal_coe_nnreal]
 
 end SimpleGraph
