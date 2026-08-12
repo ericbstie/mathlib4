@@ -5,6 +5,7 @@ Authors: Yaël Dillies, Zichen Wang
 -/
 module
 
+public import Mathlib.Analysis.Convex.Intrinsic
 public import Mathlib.Analysis.Normed.Affine.Convex
 
 /-!
@@ -214,6 +215,44 @@ lemma ConvexOn.continuousOn_interior (hf : ConvexOn ℝ C f) : ContinuousOn f (i
 
 lemma ConcaveOn.continuousOn_interior (hf : ConcaveOn ℝ C f) : ContinuousOn f (interior C) :=
   hf.locallyLipschitzOn_interior.continuousOn
+
+/-- A convex function is locally Lipschitz on the intrinsic interior of its domain.
+
+Unlike `ConvexOn.locallyLipschitzOn_interior`, this says something even when `C` has empty
+interior, eg when `C` is contained in a proper affine subspace. -/
+lemma ConvexOn.locallyLipschitzOn_intrinsicInterior (hf : ConvexOn ℝ C f) :
+    LocallyLipschitzOn (intrinsicInterior ℝ C) f := by
+  rcases C.eq_empty_or_nonempty with rfl | ⟨x₀, hx₀⟩
+  · simp
+  have hA : Nonempty (affineSpan ℝ C) := ⟨⟨x₀, subset_affineSpan ℝ C hx₀⟩⟩
+  -- Identify the affine span of `C` with the vector space `(affineSpan ℝ C).direction`, so that
+  -- the intrinsic interior of `C` becomes an honest interior and the existing result applies.
+  set ψ := AffineIsometryEquiv.vaddConst ℝ (⟨x₀, subset_affineSpan ℝ C hx₀⟩ : affineSpan ℝ C)
+  set ι := (affineSpan ℝ C).subtypeₐᵢ.comp ψ.toAffineIsometry
+  have hset : ⇑ι '' interior (⇑ι ⁻¹' C) = intrinsicInterior ℝ C := by
+    change (((↑) : affineSpan ℝ C → E) ∘ ⇑ψ) ''
+      interior ((((↑) : affineSpan ℝ C → E) ∘ ⇑ψ) ⁻¹' C) = _
+    have hint : ∀ s : Set (affineSpan ℝ C), interior (⇑ψ ⁻¹' s) = ⇑ψ ⁻¹' interior s := fun s ↦ by
+      rw [← AffineIsometryEquiv.coe_toHomeomorph, ψ.toHomeomorph.preimage_interior]
+    rw [Set.preimage_comp, hint, Set.image_comp, Set.image_preimage_eq _ ψ.surjective]
+    rfl
+  rw [← hset, ι.isometry.locallyLipschitzOn_image_iff]
+  exact (hf.comp_affineMap ι.toAffineMap).locallyLipschitzOn_interior
+
+/-- A concave function is locally Lipschitz on the intrinsic interior of its domain. -/
+lemma ConcaveOn.locallyLipschitzOn_intrinsicInterior (hf : ConcaveOn ℝ C f) :
+    LocallyLipschitzOn (intrinsicInterior ℝ C) f := by
+  simpa using hf.neg.locallyLipschitzOn_intrinsicInterior
+
+/-- A convex function is continuous on the intrinsic interior of its domain. -/
+lemma ConvexOn.continuousOn_intrinsicInterior (hf : ConvexOn ℝ C f) :
+    ContinuousOn f (intrinsicInterior ℝ C) :=
+  hf.locallyLipschitzOn_intrinsicInterior.continuousOn
+
+/-- A concave function is continuous on the intrinsic interior of its domain. -/
+lemma ConcaveOn.continuousOn_intrinsicInterior (hf : ConcaveOn ℝ C f) :
+    ContinuousOn f (intrinsicInterior ℝ C) :=
+  hf.locallyLipschitzOn_intrinsicInterior.continuousOn
 
 protected lemma ConvexOn.locallyLipschitz (hf : ConvexOn ℝ univ f) : LocallyLipschitz f := by
   simpa using hf.locallyLipschitzOn_interior

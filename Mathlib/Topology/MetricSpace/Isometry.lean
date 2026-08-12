@@ -184,6 +184,23 @@ theorem comp_continuous_iff {γ} [TopologicalSpace γ] (hf : Isometry f) {g : γ
     Continuous (f ∘ g) ↔ Continuous g :=
   hf.isUniformInducing.isInducing.continuous_iff.symm
 
+theorem locallyLipschitzOn_image_iff {γ} [PseudoEMetricSpace γ] (hf : Isometry f) {g : β → γ}
+    {s : Set α} : LocallyLipschitzOn (f '' s) g ↔ LocallyLipschitzOn s (g ∘ f) := by
+  have hmap : ∀ x, Filter.map f (𝓝[s] x) = 𝓝[f '' s] f x :=
+    fun x ↦ hf.isUniformInducing.isInducing.map_nhdsWithin_eq s x
+  constructor
+  · intro h x hx
+    obtain ⟨K, t, ht, hlip⟩ := h ⟨x, hx, rfl⟩
+    refine ⟨K, f ⁻¹' t, ?_, fun a ha b hb ↦ ?_⟩
+    · rw [← hmap x] at ht; exact ht
+    · simpa [hf.edist_eq] using hlip ha hb
+  · rintro h _ ⟨x, hx, rfl⟩
+    obtain ⟨K, t, ht, hlip⟩ := h hx
+    refine ⟨K, f '' t, ?_, ?_⟩
+    · rw [← hmap x]; exact Filter.image_mem_map ht
+    · rintro _ ⟨a, ha, rfl⟩ _ ⟨b, hb, rfl⟩
+      simpa [hf.edist_eq] using hlip ha hb
+
 end PseudoEMetricIsometry
 
 --section
