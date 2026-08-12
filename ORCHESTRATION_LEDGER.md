@@ -31,8 +31,22 @@ a model's say-so.*
 | 5 | edge count of `G(V,p)` is binomially distributed | Probability/Combinatorics | `Wanted/` | landed | ⏳ baseline build | `67dae0a` |
 | 6 | Jacobson's lemma; left–right symmetry of `Ring.jacobson` | RingTheory/Jacobson | `Wanted/` | landed | ⏳ baseline build | `a194945` |
 | 7 | `IsSemiprimaryRing.mulOpposite` | RingTheory/Wedderburn | `Wanted/` | landed | ⏳ baseline build | `1d547fb` |
+| 8 | **`Face.iicOrderIso`** — the face lattice of a face is the down-set `Set.Iic F` | Geometry/Convex/Cone | frontier C | **landed** | ✅ **VERIFIED** (build + axioms) | `65dafd5` |
 
-**Score: 0 verified · 7 awaiting baseline verification · 0 refuted**
+**Score: 1 verified · 7 awaiting baseline verification · 0 refuted**
+
+### #8 verification record
+
+```
+=== [1/3] lake build Mathlib.Geometry.Convex.Cone.Face.Lattice   → OK: build clean
+=== [2/3] sorry / admit / native_decide scan                     → OK: none
+=== [3/3] axiom audit
+'PointedCone.Face.iicOrderIso'            depends on axioms: [propext, Classical.choice, Quot.sound]
+'PointedCone.Face.toPointedCone_iicOrderIso' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PointedCone.Face.mem_iicOrderIso'        depends on axioms: [propext, Classical.choice, Quot.sound]
+```
+
+No `sorryAx`. Run by the orchestrator independently of the prover's own claim.
 
 ---
 
@@ -101,4 +115,37 @@ opened areas outward* rather than from mining `Wanted/`.
   this ledger.
 
 The serialization constraint is structural: `lake` takes an exclusive lock on `.lake/build`, so
-concurrent provers would deadlock. Parallelism therefore lives entirely in the scouting phase.
+concurrent provers queue rather than run. Parallelism therefore lives entirely in the scouting and
+proof-writing phases; verification is a single-lane road.
+
+**Prover claims are re-verified by the orchestrator.** A prover reporting a clean build is treated
+as a hypothesis, not a result. Every entry marked `VERIFIED` above was re-run independently via
+`verify.sh` before being committed.
+
+---
+
+## Meta-analysis: what is actually working
+
+**1. The best targets are ones where the mathematics already exists unbundled.** `Face.iicOrderIso`
+verified on the first attempt with *zero tactic proofs* — every field is `rfl`. That was not luck: the
+target was selected because `IsFaceOf.trans` and `IsFaceOf.isFaceOf_iff_le` already carried the
+entire mathematical content, and the only thing missing was the packaging into an `OrderIso`.
+Generalised selection rule: **prefer gaps where the content exists in unbundled form and only the
+bundling is absent** over gaps that need new mathematics. These verify fast and almost never fail.
+
+**2. The binding constraint is the module system, not the mathematics.** The single obstacle in #8
+was that `Face/Lattice.lean` uses a plain `public section`, so the new definition's body was invisible
+to its own exported `rfl` lemmas until tagged `@[expose]`. Every prover prompt now warns about this
+explicitly — it is a recurring, non-mathematical failure mode that costs a full build cycle each time
+it is rediscovered.
+
+**3. Negative scout results are as valuable as positive ones.** Scout A's most useful finding was
+that noncommutative `Ideal.map_pow` *does not exist* (`Ideal.map_mul`/`map_pow` are confined to a
+`CommRing` section, and `IsNilpotent.map` needs a `MonoidWithZero` that `Ideal R` lacks). That
+converted an open-ended search into a bounded elementwise induction and let the prover be told
+outright not to hunt for a lemma that isn't there.
+
+**4. Compute triage matters more than proof cleverness.** Killing the full 8624-module build in
+favour of the 1830-module verification closure recovered several hours. Verification cost is
+governed by import-graph position, so target selection is partly a *build-cost* decision, not only a
+mathematical one.
