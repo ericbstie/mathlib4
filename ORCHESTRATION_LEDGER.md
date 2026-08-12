@@ -104,6 +104,49 @@ opened areas outward* rather than from mining `Wanted/`.
 
 ---
 
+## Donor artifact: `anthropics/zeta-23-lean`
+
+A Lean 4 formalization of "More than two thirds of the zeros of the Riemann zeta function lie on the
+critical line" (Anthropic, 2026), introduced into this effort as a source of portable mathematics.
+
+| Property | Value |
+|---|---|
+| Size | 328 `.lean` files, ~103,000 lines |
+| Pinned to | Mathlib `51e6992…` = tag `v4.33.0-rc2` — **our fork is `v4.34.0-rc1`** |
+| Licence | Apache-2.0 (same as Mathlib; attribution required via `NOTICE`) |
+| Its own audit | `sorry`-free outside deliberate statement placeholders; **0** declared axioms; `#print axioms` on all 27 headline theorems reports only `propext, Classical.choice, Quot.sound`; comparator-checked with an independent kernel |
+
+### What this ledger does and does not claim
+
+**Not claimed:** that the headline zeta theorems have been re-verified here. Doing so requires a
+second Mathlib checkout at the pinned commit (~10 GB, many hours on 4 cores). That has not been run,
+and the artifact's own audit is *not* being treated as a substitute for verification.
+
+**Structural fact:** the artifact is a *downstream library*, not Mathlib-shaped content, and it is
+pinned to a different Mathlib. It therefore cannot be merged into Mathlib wholesale — this is a
+property of the artifact, not a scoping decision.
+
+### What is actually being incorporated
+
+`Zeta23/LinAlg/` — 7 files, ~1385 lines, namespace `RHLinalg`, documented in its own header as
+"a self-contained development … they have no upstream outside this project". It contains:
+Hermitian positive/negative parts, the positive index, Sylvester's law of inertia, von Neumann's
+trace inequality, the rank–trace inequality, and Weyl's perturbation bound.
+
+Gap check against our Mathlib (grep-verified):
+
+| Notion | In our Mathlib? |
+|---|---|
+| Positive index / signature / Sylvester inertia for Hermitian matrices | **No.** The only `inertia` in Mathlib is `RamificationInertia`, which is number-theoretic and unrelated |
+| Montgomery–Vaughan / generalized Hilbert inequality | **No** — nothing anywhere |
+| `posIndex`, matrix signature | **No** |
+
+These are classical results Mathlib genuinely lacks. The port therefore goes in as ordinary Mathlib
+contributions, ported `v4.33.0-rc2 → v4.34.0-rc1`, and must clear the same gate as everything else
+in this ledger: build + `sorry` scan + axiom audit, re-run by the orchestrator.
+
+---
+
 ## Orchestration architecture
 
 - **Scouts** — read-only (`Read`/`Grep`/`Glob`), run in parallel, forbidden from touching `lake`.
