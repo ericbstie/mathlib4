@@ -165,6 +165,39 @@ This section proves topological results about convex cones.
 namespace ConvexCone
 variable [Semifield 𝕜] [LinearOrder 𝕜] [Module 𝕜 E]
 
+section IsOpenHull
+variable {M : Type*} [AddCommGroup M] [TopologicalSpace M] [IsTopologicalAddGroup M]
+  [Module 𝕜 M] [ContinuousConstSMul 𝕜 M] {s : Set M}
+
+/-- The cone hull of an open set is open.
+
+The proof shows that the interior of `hull 𝕜 s` is itself a convex cone containing `s`, hence
+contains — and so equals — `hull 𝕜 s`.
+
+The analogous statement for `Submodule.span` needs no continuity assumption on scalar
+multiplication, since a subgroup containing a nonempty open set is automatically open. That
+argument is unavailable here because a convex cone is only a sub-semigroup, so `x ↦ c • x` being
+an open map is used instead. Whether `ContinuousConstSMul` can be dropped is not clear. -/
+theorem isOpen_hull (hs : IsOpen s) : IsOpen (hull 𝕜 s : Set M) := by
+  set T : ConvexCone 𝕜 M :=
+    { carrier := interior (hull 𝕜 s : Set M)
+      smul_mem' := by
+        intro c hc x hx
+        have hmap : IsOpenMap (fun y : M ↦ c • y) :=
+          (Homeomorph.smulOfNeZero c hc.ne').isOpenMap
+        exact (hmap _ isOpen_interior).subset_interior_iff.2
+          (image_subset_iff.2 fun y hy ↦ (hull 𝕜 s).smul_mem hc (interior_subset hy))
+          ⟨x, hx, rfl⟩
+      add_mem' := by
+        intro x hx y hy
+        refine (isOpen_interior.add_left (t := interior _)).subset_interior_iff.2 ?_
+          ⟨x, hx, y, hy, rfl⟩
+        rintro _ ⟨a, ha, b, hb, rfl⟩
+        exact (hull 𝕜 s).add_mem (interior_subset ha) (interior_subset hb) }
+  exact subset_interior_iff_isOpen.1 <| hull_min (C := T) (interior_maximal subset_hull hs)
+
+end IsOpenHull
+
 variable [TopologicalSpace 𝕜] [OrderTopology 𝕜] [DenselyOrdered 𝕜] [NoMaxOrder 𝕜]
   [ContinuousSMul 𝕜 E] {C : ConvexCone 𝕜 E}
 
