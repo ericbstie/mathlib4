@@ -19,6 +19,8 @@ structure on the collection of all faces of such a cone.
 * `Face.prod`: the product of two faces of pointed cones, together with projections `fst` and `snd`.
 * `Face.prodOrderIso`: proves that the face lattices of a product cone is the product of the face
   lattices of the individual cones.
+* `Face.iicOrderIso`: proves that the face lattice of a face `F` of `C` is the down-set of `F` in
+  the face lattice of `C`.
 
 ## Implementation notes
 
@@ -113,6 +115,39 @@ instance : CompleteLattice (Face C) where
   __ := completeLatticeOfCompleteSemilatticeInf _
 
 instance : Inhabited (Face C) := ⟨⊤⟩
+
+/-! ### Faces of a face -/
+
+/-- The face lattice of a face `F` of `C` is order-isomorphic to the down-set of `F` in the face
+lattice of `C`: a pointed cone is a face of `F` if and only if it is a face of `C` contained
+in `F`. -/
+@[expose]
+def iicOrderIso (F : Face C) : Face (F : PointedCone R M) ≃o Set.Iic F where
+  toFun G := ⟨⟨G.toSubmodule, G.isFaceOf.trans F.isFaceOf⟩, G.isFaceOf.le⟩
+  invFun G := ⟨G.1.toSubmodule, (IsFaceOf.isFaceOf_iff_le G.1.isFaceOf F.isFaceOf).mpr G.2⟩
+  left_inv _ := rfl
+  right_inv _ := rfl
+  map_rel_iff' := .rfl
+
+/-- `Face.iicOrderIso` does not change the underlying pointed cone. -/
+@[simp]
+theorem toPointedCone_iicOrderIso (F : Face C) (G : Face (F : PointedCone R M)) :
+    ((F.iicOrderIso G : Face C) : PointedCone R M) = G := rfl
+
+/-- `Face.iicOrderIso.symm` does not change the underlying pointed cone. -/
+@[simp]
+theorem toPointedCone_iicOrderIso_symm (F : Face C) (G : Set.Iic F) :
+    ((F.iicOrderIso.symm G : Face (F : PointedCone R M)) : PointedCone R M) = (G : Face C) := rfl
+
+/-- Membership in `F.iicOrderIso G` is membership in `G`. -/
+@[simp]
+theorem mem_iicOrderIso (F : Face C) (G : Face (F : PointedCone R M)) {x : M} :
+    x ∈ (F.iicOrderIso G : Face C) ↔ x ∈ G := .rfl
+
+/-- Membership in `F.iicOrderIso.symm G` is membership in `G`. -/
+@[simp]
+theorem mem_iicOrderIso_symm (F : Face C) (G : Set.Iic F) {x : M} :
+    x ∈ F.iicOrderIso.symm G ↔ x ∈ (G : Face C) := .rfl
 
 end Face
 
