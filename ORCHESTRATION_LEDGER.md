@@ -32,8 +32,34 @@ a model's say-so.*
 | 6 | Jacobson's lemma; left–right symmetry of `Ring.jacobson` | RingTheory/Jacobson | `Wanted/` | landed | ⏳ baseline build | `a194945` |
 | 7 | `IsSemiprimaryRing.mulOpposite` | RingTheory/Wedderburn | `Wanted/` | landed | ⏳ baseline build | `1d547fb` |
 | 8 | **`Face.iicOrderIso`** — the face lattice of a face is the down-set `Set.Iic F` | Geometry/Convex/Cone | frontier C | **landed** | ✅ **VERIFIED** (build + axioms) | `65dafd5` |
+| 9 | **expected edge count + variance of `G(V,p)`** (`integral_ncard_edgeSet_binomialRandom`, `variance_…`, `binomialRandom_hasLaw_ncard_edgeSet`) | Probability/Combinatorics | frontier B | **landed** | ✅ **VERIFIED** (build + axioms) | `600ec3a` |
+| 10 | `isSemiprimaryRing_mulOpposite_iff` + `RingEquiv.isSemiprimaryRing(_iff)` + `Ring.map_jacobson_of_equiv` + `Ring.map_mem_jacobson_pow` | RingTheory/Jacobson | frontier A | written | ⏳ verifying | — |
 
-**Score: 1 verified · 7 awaiting baseline verification · 0 refuted**
+**Score: 2 verified · 7 baseline inconclusive · 1 verifying · 0 refuted**
+
+### #9 verification record
+
+```
+=== [1/3] lake build Mathlib.Probability.Combinatorics.BinomialRandomGraph.Defs → OK: build clean
+=== [2/3] sorry / admit / native_decide scan                                    → OK: none
+=== [3/3] axiom audit
+'SimpleGraph.integral_ncard_edgeSet_binomialRandom'  depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimpleGraph.variance_ncard_edgeSet_binomialRandom'  depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimpleGraph.binomialRandom_hasLaw_ncard_edgeSet'    depends on axioms: [propext, Classical.choice, Quot.sound]
+```
+
+### Why the baseline is "inconclusive" and not "refuted"
+
+The baseline build of the seven prior commits failed with four errors, **none of them
+mathematical**. All were of the form
+
+```
+error: failed to open file '.../Mathlib/LinearAlgebra/Determinant.olean': No such file or directory
+```
+
+`Determinant.olean` exists. The file was momentarily absent because one `lake` invocation was
+rewriting it while another tried to read it. The prior commits are therefore **neither confirmed nor
+refuted** by that run, and the ledger says so rather than recording a false failure.
 
 ### #8 verification record
 
@@ -145,6 +171,36 @@ These are classical results Mathlib genuinely lacks. The port therefore goes in 
 contributions, ported `v4.33.0-rc2 → v4.34.0-rc1`, and must clear the same gate as everything else
 in this ledger: build + `sorry` scan + axiom audit, re-run by the orchestrator.
 
+### Port plan (scouted; all 1113 donor identifier tokens checked against our tree)
+
+**There is essentially zero API drift.** Every Mathlib name the donor uses still exists, same name,
+same namespace, no deprecations. The port is a *naming and architecture* job, not a repair job. The
+mechanical cost is the new module system (`module` / `public import` / `@[expose] public section`),
+which is ~5 lines per file; exposure was checked for every Mathlib file the donor unfolds, and all
+are `@[expose] public section`, so the donor's `rfl` proofs should survive.
+
+| Rank | Port | Value | Risk | Estimate |
+|---|---|---|---|---|
+| **1** | **`VonNeumann.lean`** — von Neumann's trace inequality | classical named theorem, **absent from Mathlib in any form**; unlocks Ky Fan / Schatten norms / singular values, of which Mathlib has none | minimal — its `import PosIndex` is *vestigial*, it uses nothing from that file; genuinely standalone | 1–3 h |
+| 2 | 3 reindexing lemmas from `PosIndex.lean` | Mathlib defines `eigenvalues` and `eigenvalues₀` seven lines apart and has **no lemma relating sums or cardinalities across them** | tiny | 1 h |
+| 3 | `Sylvester.lean` + the `*_specMap` lemmas | Sylvester's law for Hermitian matrices | **architectural** — see below | 1–2 d |
+| 4 | `Inertia.lean` | `posIndex_conj_le`, `posIndex_add_le`; tidiest file in the donor | depends entirely on #3 | — |
+| 5 | `Weyl.lean` | nothing Weyl-like exists for Hermitian matrices | donor's own docstring admits it is **not** the textbook statement | — |
+| 6 | 2 lemmas only from `RankTrace.lean` | `trace_mul_nonneg_of_posSemidef` is classical and absent | rest is paper-specific and would fail review | — |
+
+**Do NOT port — Mathlib already has it.** The donor's `specMap` is *definitionally*
+`Matrix.IsHermitian.cfc`, and its own docstring admits it was "reproduced here to keep imports
+light". `hermPosPart`/`hermNegPart` are `CFC.posPart`/`negPart`; all four Jordan-decomposition
+lemmas already exist in `…/ContinuousFunctionalCalculus/PosPart/Basic.lean`. `frobSq` is the
+Frobenius norm; `Antitone.monovary_antitone` duplicates `Antitone.monovary`.
+
+**The one real design question** (blocks #3, not #1): Mathlib has `QuadraticForm.sigPos`, which is
+*exactly* the donor's characterisation of the positive index — but only for quadratic forms, and
+`sigPos` needs `[LinearOrder R]`, so over `ℂ` the Hermitian form is not a `QuadraticForm ℂ _` without
+restriction of scalars. The right contribution is a *bridge theorem* `sigPos = #{i | 0 < λᵢ}`, not a
+parallel `posIndex` definition. That is a maintainer conversation, so #1 and #2 — which need none of
+it — go first.
+
 ---
 
 ## Orchestration architecture
@@ -188,7 +244,25 @@ that noncommutative `Ideal.map_pow` *does not exist* (`Ideal.map_mul`/`map_pow` 
 converted an open-ended search into a bounded elementwise induction and let the prover be told
 outright not to hunt for a lemma that isn't there.
 
-**4. Compute triage matters more than proof cleverness.** Killing the full 8624-module build in
+**4. CORRECTION — concurrent `lake` builds are unsafe, not merely slow.** The architecture note above
+originally assumed concurrent provers would *queue* on lake's build lock and were therefore harmless.
+That was wrong, and it cost a baseline run. Multiple `lake` invocations against one `.lake/build`
+tree interleave: one rewrites an `.olean` while another reads it, and the reader dies with
+`failed to open file … .olean`. A prover confirmed it directly — *"both builds are progressing
+concurrently"*. The corrupting run had also been `pkill -9`'d earlier, which does not help.
+
+Revised policy, now in force:
+
+* **Exactly one `lake` invocation at a time, orchestrator-enforced.** Not "one per agent".
+* **Provers run strictly serially** — one prover in flight, never several. Provers still need to
+  build, because iterating against real compiler errors is the whole value; taking that away would
+  be worse than the contention it avoids.
+* **Scouts stay parallel** — they are read-only and touch no build state.
+* Stop builds with `SIGTERM`, never `SIGKILL`.
+
+Parallelising the *thinking* was right; parallelising the *checking* was the error.
+
+**5. Compute triage matters more than proof cleverness.** Killing the full 8624-module build in
 favour of the 1830-module verification closure recovered several hours. Verification cost is
 governed by import-graph position, so target selection is partly a *build-cost* decision, not only a
 mathematical one.
