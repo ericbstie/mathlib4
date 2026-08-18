@@ -6501,6 +6501,7 @@ public import Mathlib.RingTheory.Artinian.Algebra
 public import Mathlib.RingTheory.Artinian.Defs
 public import Mathlib.RingTheory.Artinian.Instances
 public import Mathlib.RingTheory.Artinian.Module
+public import Mathlib.RingTheory.Artinian.Opposite
 public import Mathlib.RingTheory.Artinian.Ring
 public import Mathlib.RingTheory.Bezout
 public import Mathlib.RingTheory.Bialgebra.Basic

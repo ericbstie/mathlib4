@@ -281,6 +281,53 @@ theorem unop_mem_jacobson_pow : ∀ (n : ℕ) (x : Rᵐᵒᵖ),
       · intro y z hy hz
         simpa using add_mem hy hz
 
+/-- Powers of the Jacobson radical transfer from `R` to the opposite ring. This is the mirror of
+`Ring.unop_mem_jacobson_pow`; as there, the reversal of products by `MulOpposite.op` is why the
+induction peels a factor off opposite ends on the two sides. -/
+theorem op_mem_jacobson_pow : ∀ (n : ℕ) (x : R),
+    x ∈ jacobson R ^ n → op x ∈ jacobson Rᵐᵒᵖ ^ n := by
+  intro n
+  induction n with
+  | zero => intro x _; rw [Submodule.pow_zero, Ideal.one_eq_top]; trivial
+  | succ n ih =>
+    intro x hx
+    rcases eq_or_ne n 0 with rfl | hn
+    · rw [zero_add, Submodule.pow_one] at hx ⊢
+      exact mem_jacobson_op_iff.2 hx
+    · rw [Submodule.pow_succ] at hx
+      rw [(jacobson Rᵐᵒᵖ).pow_succ' hn]
+      refine Submodule.mul_induction_on hx ?_ ?_
+      · intro a ha b hb
+        exact Submodule.mul_mem_mul (mem_jacobson_op_iff.2 hb) (ih a ha)
+      · intro y z hy hz
+        simpa using add_mem hy hz
+
+/-- Membership in a power of the Jacobson radical is left-right symmetric. -/
+theorem op_mem_jacobson_pow_iff {n : ℕ} {x : R} :
+    op x ∈ jacobson Rᵐᵒᵖ ^ n ↔ x ∈ jacobson R ^ n :=
+  ⟨fun h ↦ by simpa using unop_mem_jacobson_pow n _ h, op_mem_jacobson_pow n x⟩
+
+/-- Nilpotence of the Jacobson radical is left-right symmetric. -/
+theorem isNilpotent_jacobson_mulOpposite_iff :
+    IsNilpotent (jacobson Rᵐᵒᵖ) ↔ IsNilpotent (jacobson R) := by
+  constructor
+  · rintro ⟨n, hn⟩
+    rw [Submodule.zero_eq_bot] at hn
+    refine ⟨n, ?_⟩
+    rw [Submodule.zero_eq_bot, eq_bot_iff]
+    intro x hx
+    have h := op_mem_jacobson_pow n x hx
+    rw [hn] at h
+    simpa using h
+  · rintro ⟨n, hn⟩
+    rw [Submodule.zero_eq_bot] at hn
+    refine ⟨n, ?_⟩
+    rw [Submodule.zero_eq_bot, eq_bot_iff]
+    intro x hx
+    have h := unop_mem_jacobson_pow n x hx
+    rw [hn] at h
+    simpa using h
+
 /-- Quotienting `Rᵐᵒᵖ` by its Jacobson radical gives the opposite of the quotient of `R` by its
 Jacobson radical. -/
 noncomputable def jacobsonOpQuotEquiv :
@@ -301,12 +348,11 @@ end Ring
 /-- The opposite of a semiprimary ring is semiprimary. -/
 theorem IsSemiprimaryRing.mulOpposite [IsSemiprimaryRing R] : IsSemiprimaryRing Rᵐᵒᵖ where
   isSemisimpleRing := Ring.jacobsonOpQuotEquiv.symm.isSemisimpleRing
-  isNilpotent := by
-    obtain ⟨n, hn⟩ := IsSemiprimaryRing.isNilpotent (R := R)
-    refine ⟨n, ?_⟩
-    have hbot : Ring.jacobson R ^ n = ⊥ := by rwa [← Submodule.zero_eq_bot]
-    rw [Submodule.zero_eq_bot, eq_bot_iff]
-    intro x hx
-    have h := Ring.unop_mem_jacobson_pow n x hx
-    rw [hbot] at h
-    simpa using h
+  isNilpotent := Ring.isNilpotent_jacobson_mulOpposite_iff.mpr
+    (IsSemiprimaryRing.isNilpotent (R := R))
+
+/-- Being semiprimary is left-right symmetric. -/
+theorem isSemiprimaryRing_mulOpposite_iff : IsSemiprimaryRing Rᵐᵒᵖ ↔ IsSemiprimaryRing R :=
+  ⟨fun h ↦ ⟨isSemisimpleRing_mulOpposite_iff.mp Ring.jacobsonOpQuotEquiv.isSemisimpleRing,
+    Ring.isNilpotent_jacobson_mulOpposite_iff.mp h.isNilpotent⟩,
+    fun _ ↦ IsSemiprimaryRing.mulOpposite⟩
