@@ -33,19 +33,15 @@ Put together `sequentialFunctor_initial` and `preorder_of_cofiltered_countable`.
 proof_wanted hasCofilteredCountableLimits_of_hasSequentialLimits [HasLimitsOfShape ℕᵒᵖ C] :
     ∀ (J : Type) [SmallCategory J] [IsCofiltered J] [CountableCategory J], HasLimitsOfShape J C
 
-/--
-This is the countable version of `CategoryTheory.Limits.has_limits_of_finite_and_cofiltered`, given
-all of the above.
--/
-proof_wanted hasCountableLimits_of_hasFiniteLimits_and_hasSequentialLimits [HasFiniteLimits C]
-  [HasLimitsOfShape ℕᵒᵖ C] : HasCountableLimits C
-
-/--
-For this we need to dualize `sequentialFunctor_initial` (in
-`Mathlib/CategoryTheory/Limits/Shapes/Countable.lean`) and the `proof_wanted` statements above.
--/
-proof_wanted hasCountableColimits_of_hasFiniteColimits_and_hasSequentialColimits
-  [HasFiniteColimits C] [HasLimitsOfShape ℕ C] : HasCountableColimits C
+-- The two remaining statements of this section, on building all countable (co)limits out of
+-- finite (co)limits and sequential (co)limits, are now proved in
+-- `Mathlib/CategoryTheory/Limits/Constructions/Countable.lean`. They turned out not to depend on
+-- the three statements above: building `α`-indexed products from finite products only ever needs
+-- limits over the single cofiltered shape `(Finset (Discrete α))ᵒᵖ`, which for countable `α` is a
+-- countable *preorder*, so `sequentialFunctor` already covers it. Note also that the colimit
+-- statement was previously written with hypothesis `[HasLimitsOfShape ℕ C]`; that was a typo for
+-- `[HasColimitsOfShape ℕ C]`, since sequential colimits, not limits, are what the construction
+-- consumes.
 
 end IsCofiltered
 
